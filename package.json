@@ -1,0 +1,17 @@
+{
+  "name": "sendmail",
+  "version": "1.0.0",
+  "description": "Hey this allow the user to send mail to everyone through the just terminal",
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "nodemailer": "^7.0.5"
+  }
+}

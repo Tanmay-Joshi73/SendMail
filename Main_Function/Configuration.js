@@ -1,5 +1,5 @@
-#!/usr/bin/env node
 "use strict";
+// import inquirer from 'inquirer';
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -37,23 +37,10 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-// import nodemailer from "nodemailer"
-var commander_1 = require("commander");
-var Program = new commander_1.Command();
-var Configuration_js_1 = require("./Main_Function/Configuration.js");
-Program.name("SendMail").description("package to send to everyone throught just cli commands")
-    .version('1.0.0');
-///Command for Configure 1
-Program.command('configure')
-    .description('Add Or Update Your Email or Password')
-    .action(function () {
-    (0, Configuration_js_1.default)();
-});
-Program.command('send mail').
-    description("send mail to anyone through the gmaiil")
-    .action(function () { return __awaiter(void 0, void 0, void 0, function () {
+var Configure = function () { return __awaiter(void 0, void 0, void 0, function () {
     return __generator(this, function (_a) {
+        console.log('hey this function is running perfectly without any issues');
         return [2 /*return*/];
     });
-}); });
-Program.parse();
+}); };
+exports.default = Configure;

@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // import nodemailer from "nodemailer"
-const {Command} =require('Commander')
-// import {Command} from 'commander';
+// const {Command} =require('Commander')
+import {Command} from 'commander';
 const Program=new Command();
-const Configure =require('./Main_Function/Configuration.js')
-
+// const {Configure} =require('./Main_Function/Configuration.js')
+import Configure from './Main_Function/Configuration.js'
 Program.name("SendMail").description("package to send to everyone throught just cli commands")
 .version('1.0.0')
 

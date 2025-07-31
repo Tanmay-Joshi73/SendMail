@@ -4,10 +4,10 @@
   "description": "Hey this allow the user to send mail to everyone through the just terminal",
   "license": "ISC",
   "author": "",
-  "type": "commonjs",
+  "type": "module",
   "main": "index.ts",
   "bin": {
-    "SendMail": "./index.ts"
+    "SendMail": "./dist/index.js"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -17,11 +17,15 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "inquirer": "^12.9.0",
-    "nodemailer": "^7.0.5"
+    "keytar": "^7.9.0",
+    "nodemailer": "^7.0.5",
+    "validator": "^13.15.15"
   },
   "devDependencies": {
     "@types/inquirer": "^9.0.8",
     "@types/node": "^24.1.0",
+    "@types/nodemailer": "^6.4.17",
+    "@types/validator": "^13.15.2",
     "typescript": "^5.8.3"
   }
 }

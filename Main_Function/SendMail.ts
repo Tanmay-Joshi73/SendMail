@@ -2,6 +2,8 @@ import inquirer from "inquirer";
 import validator from 'validator';
 import nodemailer from 'nodemailer';
 import nfd from 'node-file-dialog'
+// import textareaPrompt from "inquirer-textarea-prompt";
+// inquirer.registerPrompt("textarea", textareaPrompt);
 import {GetUserEmail,pickSender} from '../utls/Credentials.js';
 import fs from 'fs'
 const ctx:{
@@ -55,18 +57,18 @@ export const  Sendmail=async():Promise<void>=>{
       message: "Email Subject:",
     },
     {
-      type: "input",
-      name: "body",
-      message: "Email Message:",
-    },
-    {
-      type: "confirm",
       name: "addAttachment",
       message: "Do you want to attach files?",
       default: false,
+      type: "confirm",
+    },
+    {
+      type: "editor",
+      name: "body",
+      message: "Email Message:",
     },
   ]);
-
+  console.log(`-> ${answers.body}`)
   ctx.From=From;
   ctx.to=answers.to;
   ctx.subject=answers.subject;

@@ -2,6 +2,7 @@ import inquirer from "inquirer";
 import validator from 'validator';
 import nodemailer from 'nodemailer';
 import nfd from 'node-file-dialog'
+import {main} from "./deekseek.js";
 // import textareaPrompt from "inquirer-textarea-prompt";
 // inquirer.registerPrompt("textarea", textareaPrompt);
 import {GetUserEmail,pickSender} from '../utls/Credentials.js';
@@ -14,8 +15,14 @@ const ctx:{
     attachment?:{filename:string,path:string}[];
   }={}
 
+const Ptx:{
+  to?:string,
+  purpose?:string,
+  tone?:string
+}={}
 
-  //Functon for accepting file path
+
+  //Function for accepting file path
 const acceptFilePath = async (): Promise<void> => {
  try {
     const files = await nfd({
@@ -106,4 +113,56 @@ else{
     console.log(`email is send-> ${info.response}`)
 }
 })
+}
+
+
+export const ComposeWithAI=async():Promise<void>=>{
+   const data=await pickSender()
+      const {account:From,password}={...data};
+const info = await inquirer.prompt([
+  {
+      type: "input",
+      name: "to",
+      message: "Recipient's Email:",
+      validate: (input: any) => {
+              return validator.isEmail(input) || '❌ Please enter a valid email address' 
+          }
+    },
+      {
+      type: "input",
+      name: "subject",
+      message: "Email Subject:",
+    },
+    {
+      type: "input",
+      name: "purpose",
+      message: "Briefly describe the purpose of the email:",
+    },
+    {
+       type: "select",
+      name: "tone",
+      message: "Choose the tone of the email:",
+       choices: [
+        {
+          name: "Professional", value: "professional",
+          
+        },
+         { name: "Casual", value: "casual" },
+        { name: "Friendly", value: "friendly" },
+        { name: "Formal", value: "formal" },
+        { name: "Funny", value: "funny" },
+       ]
+    }
+    
+])
+Ptx.to=info.to;
+Ptx.purpose=info.purpose;
+Ptx.tone=info.tone;
+
+  let emailBody = "";
+  let done = false;
+  while(!done){
+    main(Ptx)
+    done=true;
+  }
 }

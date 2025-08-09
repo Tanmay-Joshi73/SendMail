@@ -18,7 +18,6 @@ export const SetAccount = async (email, password) => {
 };
 export const DeleteAccount = async () => {
     const creds = await keytar.findCredentials(Service);
-    console.log(creds);
     if (creds.length === 0) {
         console.log("❌ No saved emails found.");
         return;

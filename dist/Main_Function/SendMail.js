@@ -1,7 +1,31 @@
 import inquirer from "inquirer";
 import validator from 'validator';
 import nodemailer from 'nodemailer';
+import nfd from 'node-file-dialog';
 import { pickSender } from '../utls/Credentials.js';
+const ctx = {};
+//Functon for accepting file path
+const acceptFilePath = async () => {
+    try {
+        const files = await nfd({
+            type: "open-file",
+            multiple: true,
+        });
+        ctx.attachment = files.map((filePath) => ({
+            filename: filePath.split(/[/\\]/).pop() || "file",
+            path: filePath,
+        }));
+        console.log("✅ Files attached:", files);
+    }
+    catch (error) {
+        if (error instanceof Error && error.message === "Nothing selected") {
+            console.log("⚠ No files selected.");
+        }
+        else {
+            console.error("❌ Error selecting files:", error);
+        }
+    }
+};
 export const Sendmail = async () => {
     const data = await pickSender();
     const { account: From, password } = { ...data };
@@ -24,7 +48,20 @@ export const Sendmail = async () => {
             name: "body",
             message: "Email Message:",
         },
+        {
+            type: "confirm",
+            name: "addAttachment",
+            message: "Do you want to attach files?",
+            default: false,
+        },
     ]);
+    ctx.From = From;
+    ctx.to = answers.to;
+    ctx.subject = answers.subject;
+    ctx.text = answers.body;
+    if (answers.addAttachment === true) {
+        await acceptFilePath();
+    }
     const transporter = nodemailer.createTransport({
         host: "smtp.gmail.com",
         port: 587,
@@ -38,9 +75,10 @@ export const Sendmail = async () => {
     });
     const mailOptions = {
         from: From,
-        to: answers.to,
-        subject: answers.subject,
-        text: answers.body
+        to: ctx.to,
+        subject: ctx.subject,
+        html: ctx.text,
+        attachments: ctx.attachment || []
     };
     transporter.sendMail(mailOptions, (error, info) => {
         if (error) {

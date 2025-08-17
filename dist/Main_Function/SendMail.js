@@ -30,6 +30,34 @@ const acceptFilePath = async () => {
         }
     }
 };
+export async function Compose(From, password, ctx) {
+    try {
+        const transporter = nodemailer.createTransport({
+            host: "smtp.gmail.com",
+            port: 587,
+            secure: false,
+            auth: {
+                user: From,
+                pass: password,
+            },
+            tls: {
+                rejectUnauthorized: false, // 👈 Bypass self-signed cert error
+            },
+        });
+        const mailOptions = {
+            from: From,
+            to: ctx.to,
+            subject: ctx.subject,
+            html: ctx.text,
+            attachments: ctx.attachment || [],
+        };
+        const info = await transporter.sendMail(mailOptions);
+        console.log(`✅ Email sent to ${ctx.to}. Response: ${info.response}`);
+    }
+    catch (err) {
+        console.log(err);
+    }
+}
 export const Sendmail = async () => {
     const data = await pickSender();
     const { account: From, password } = { ...data };
@@ -67,31 +95,11 @@ export const Sendmail = async () => {
     if (answers.addAttachment === true) {
         await acceptFilePath();
     }
-    const transporter = nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 587,
-        secure: false,
-        auth: {
-            user: From,
-            pass: password,
-        }, tls: {
-            rejectUnauthorized: false, // 👈 BYPASS self-signed certificate error
-        },
-    });
-    const mailOptions = {
-        from: From,
-        to: ctx.to,
-        subject: ctx.subject,
-        html: ctx.text,
-        attachments: ctx.attachment || []
-    };
-    transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-            console.log('error is', error);
-        }
-        else {
-            console.log(`email is send-> ${info.response}`);
-        }
+    await Compose(From || "", password || "", {
+        to: ctx.to ?? "",
+        subject: ctx.subject ?? "",
+        text: ctx.text ?? "",
+        attachment: ctx.attachment,
     });
 };
 export const ComposeWithAI = async () => {
@@ -134,8 +142,13 @@ export const ComposeWithAI = async () => {
     Ptx.to = info.to;
     Ptx.purpose = info.purpose;
     Ptx.tone = info.tone;
-    let emailBody = "";
-    let done = false;
+    Ptx.subject = info.subject;
     //AI function call for composing Email;
-    main(Ptx);
+    const draft = await main(Ptx);
+    await Compose(From || "", password || "", {
+        to: info.to ?? "",
+        subject: info.subject ?? "",
+        text: draft ?? "",
+        attachment: ctx.attachment ?? [],
+    });
 };

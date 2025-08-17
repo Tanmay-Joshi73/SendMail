@@ -110,7 +110,7 @@ let keepEditing = true;
 
 catch(err){
     console.log(err)
-    return '';
+     throw new Error('hey error occured here')
     
 }
 

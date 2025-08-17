@@ -2,29 +2,30 @@ import inquirer from "inquirer";
 import validator from 'validator';
 import nodemailer from 'nodemailer';
 import nfd from 'node-file-dialog'
-import {main} from "./deekseek.js";
+import { main } from "./deekseek.js";
 // import textareaPrompt from "inquirer-textarea-prompt";
 // inquirer.registerPrompt("textarea", textareaPrompt);
-import {GetUserEmail,pickSender} from '../utls/Credentials.js';
+import { GetUserEmail, pickSender } from '../utls/Credentials.js';
 import fs from 'fs'
-const ctx:{
-    From?:string,
-    to?:string,
-    subject?:string,
-    text?:string,
-    attachment?:{filename:string,path:string}[];
-  }={}
+const ctx: {
+  From?: string,
+  to?: string,
+  subject?: string,
+  text?: string,
+  attachment?: { filename: string, path: string }[];
+} = {}
 
-const Ptx:{
-  to?:string,
-  purpose?:string,
-  tone?:string
-}={}
+const Ptx: {
+  to?: string,
+  purpose?: string,
+  tone?: string,
+  subject?: string
+} = {}
 
 
-  //Function for accepting file path
+//Function for accepting file path
 const acceptFilePath = async (): Promise<void> => {
- try {
+  try {
     const files = await nfd({
       type: "open-file",
       multiple: true,
@@ -46,11 +47,11 @@ const acceptFilePath = async (): Promise<void> => {
 
 }
 
-export async function Compose( From: string,
+export async function Compose(From: string | '',
   password: string,
-  ctx: { to: string; subject: string; text: string; attachment?: any[] }):Promise<void>{
+  ctx: { to: string; subject: string; text: string; attachment?: any[] }): Promise<void> {
 
- try {
+  try {
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
       port: 587,
@@ -64,25 +65,36 @@ export async function Compose( From: string,
       },
     });
 
-}
-catch(err){
-  console.log(err)
-}
+    const mailOptions = {
+      from: From,
+      to: ctx.to,
+      subject: ctx.subject,
+      html: ctx.text,
+      attachments: ctx.attachment || [],
+    };
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email sent to ${ctx.to}. Response: ${info.response}`)
+
+
   }
+  catch (err) {
+    console.log(err)
+  }
+}
 
 
 
-export const  Sendmail=async():Promise<void>=>{
-      const data=await pickSender()
-      const {account:From,password}={...data};
-    const answers = await inquirer.prompt([
+export const Sendmail = async (): Promise<void> => {
+  const data = await pickSender()
+  const { account: From, password } = { ...data };
+  const answers = await inquirer.prompt([
     {
       type: "input",
       name: "to",
       message: "Recipient's Email:",
       validate: (input: any) => {
-              return validator.isEmail(input) || '❌ Please enter a valid email address' 
-          }
+        return validator.isEmail(input) || '❌ Please enter a valid email address'
+      }
     },
     {
       type: "input",
@@ -102,59 +114,39 @@ export const  Sendmail=async():Promise<void>=>{
     },
   ]);
   console.log(`-> ${answers.body}`)
-  ctx.From=From;
-  ctx.to=answers.to;
-  ctx.subject=answers.subject;
-  ctx.text=answers.body;
-  if(answers.addAttachment===true){
-  await acceptFilePath()  
-}
-  
-  
-  const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
-    auth: {
-      user: From,
-      pass: password,
-    },  tls: {
-    rejectUnauthorized: false, // 👈 BYPASS self-signed certificate error
-  },
+  ctx.From = From;
+  ctx.to = answers.to;
+  ctx.subject = answers.subject;
+  ctx.text = answers.body;
+  if (answers.addAttachment === true) {
+    await acceptFilePath()
+  }
+
+
+
+  await Compose(From || "", password || "", {
+    to: ctx.to ?? "",
+    subject: ctx.subject ?? "",
+    text: ctx.text ?? "",
+    attachment: ctx.attachment,
   });
 
-const mailOptions = {
-  from: From,
-  to: ctx.to,
-  subject: ctx.subject,
-  html: ctx.text,
-  attachments:ctx.attachment || []
-
-};
-transporter.sendMail(mailOptions,(error,info)=>{
-if(error){
-    console.log('error is',error)
-}
-else{
-    console.log(`email is send-> ${info.response}`)
-}
-})
 }
 
 
-export const ComposeWithAI=async():Promise<void>=>{
-   const data=await pickSender()
-      const {account:From,password}={...data};
-const info = await inquirer.prompt([
-  {
+export const ComposeWithAI = async (): Promise<void> => {
+  const data = await pickSender()
+  const { account: From, password } = { ...data };
+  const info = await inquirer.prompt([
+    {
       type: "input",
       name: "to",
       message: "Recipient's Email:",
       validate: (input: any) => {
-              return validator.isEmail(input) || '❌ Please enter a valid email address' 
-          }
+        return validator.isEmail(input) || '❌ Please enter a valid email address'
+      }
     },
-      {
+    {
       type: "input",
       name: "subject",
       message: "Email Subject:",
@@ -165,29 +157,37 @@ const info = await inquirer.prompt([
       message: "Briefly describe the purpose of the email:",
     },
     {
-       type: "select",
+      type: "select",
       name: "tone",
       message: "Choose the tone of the email:",
-       choices: [
+      choices: [
         {
           name: "Professional", value: "professional",
-          
+
         },
-         { name: "Casual", value: "casual" },
+        { name: "Casual", value: "casual" },
         { name: "Friendly", value: "friendly" },
         { name: "Formal", value: "formal" },
         { name: "Funny", value: "funny" },
-       ]
+      ]
     }
-    
-])
-Ptx.to=info.to;
-Ptx.purpose=info.purpose;
-Ptx.tone=info.tone;
 
+  ])
+  Ptx.to = info.to;
+  Ptx.purpose = info.purpose;
+  Ptx.tone = info.tone;
+  Ptx.subject = info.subject;
   
- //AI function call for composing Email;
-  const draft=main(Ptx)
-    
-  
+
+
+  //AI function call for composing Email;
+  const draft = await main(Ptx)
+ 
+  await Compose(From || "", password || "", {
+    to: info.to ?? "",
+    subject: info.subject ?? "",
+    text: draft ?? "",
+    attachment: ctx.attachment ?? [],
+  });
+
 }

@@ -94,6 +94,6 @@ export const main = async (info) => {
     }
     catch (err) {
         console.log(err);
-        return '';
+        throw new Error('hey error occured here');
     }
 };

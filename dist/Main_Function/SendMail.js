@@ -136,8 +136,6 @@ export const ComposeWithAI = async () => {
     Ptx.tone = info.tone;
     let emailBody = "";
     let done = false;
-    while (!done) {
-        main(Ptx);
-        done = true;
-    }
+    //AI function call for composing Email;
+    main(Ptx);
 };

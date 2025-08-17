@@ -46,6 +46,32 @@ const acceptFilePath = async (): Promise<void> => {
 
 }
 
+export async function Compose( From: string,
+  password: string,
+  ctx: { to: string; subject: string; text: string; attachment?: any[] }):Promise<void>{
+
+ try {
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: false,
+      auth: {
+        user: From,
+        pass: password,
+      },
+      tls: {
+        rejectUnauthorized: false, // 👈 Bypass self-signed cert error
+      },
+    });
+
+}
+catch(err){
+  console.log(err)
+}
+  }
+
+
+
 export const  Sendmail=async():Promise<void>=>{
       const data=await pickSender()
       const {account:From,password}={...data};
@@ -159,10 +185,9 @@ Ptx.to=info.to;
 Ptx.purpose=info.purpose;
 Ptx.tone=info.tone;
 
-  let emailBody = "";
-  let done = false;
-  while(!done){
-    main(Ptx)
-    done=true;
-  }
+  
+ //AI function call for composing Email;
+  const draft=main(Ptx)
+    
+  
 }

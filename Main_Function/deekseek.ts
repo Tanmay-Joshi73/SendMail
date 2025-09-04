@@ -1,43 +1,56 @@
-import OpenAI  from 'openai'
-import {exec} from "child_process"
-import fs from 'fs'
-import readline from 'readline'
-const key='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'
-interface info{
-tone?:string;
-to?:string;
-purpose?:string;
+import { exec } from "child_process";
+import fs from "fs";
+import readline from "readline";
+import { loadModel, createCompletion } from "gpt4all";
+
+interface Info {
+  tone?: string;
+  to?: string;
+  purpose?: string;
 }
-const openai = new OpenAI({
-  baseURL: "https://openrouter.ai/api/v1",
-  apiKey: key,
-  defaultHeaders: {
-    "HTTP-Referer": "<YOUR_SITE_URL>", // Optional. Site URL for rankings on openrouter.ai.
-    "X-Title": "<YOUR_SITE_NAME>", // Optional. Site title for rankings on openrouter.ai.
-  },
+
+// 1️⃣ Load model
+const model = await loadModel("orca-mini-3b-gguf2-q4_0.gguf", {
+  verbose: true,
+  device: "gpu",
+  nCtx: 2048,
 });
 
-async function polishDraft(draft:string):Promise<string>{
-  const res = await openai.chat.completions.create({
-    model: "gpt-4o-mini", // or your deepseek with baseURL
-    messages: [
-      { role: "system", content: "You are an assistant that refines email drafts." },
-      { role: "user", content: `Polish this email without changing its intent:\n${draft}` }
-    ]
-  });
-  return res.choices[0].message.content || "";
+// 2️⃣ Start a chat session
+const chat = await model.createChatSession({
+  temperature: 0.8,
+  systemPrompt: `### System:
+You are an assistant that writes polished, unique, and professional email drafts.
+
+Rules:
+- Structure: Greeting → Body → Polite Closing.
+- Adapt the tone exactly as requested:
+  • professional → clear, concise, respectful.
+  • casual → relaxed, conversational, but still polite.
+  • friendly → warm, approachable, encouraging.
+  • formal → very polite, respectful, and structured.
+  • funny → witty, lighthearted, but not unprofessional.
+- If user input is incomplete (missing names, details, etc.), fill in placeholders like [Recipient] or [Company].
+- Avoid clichés; use fresh, natural expressions.`,
+});
+
+// 3️⃣ Polishing helper
+async function polishDraft(draft: string): Promise<string> {
+  const res = await createCompletion(chat, `Polish this email without changing its intent:\n${draft}`);
+  return res.choices[0].message?.content?.trim() || draft;
 }
 
-function openEditor(file:any) {
+// 4️⃣ Open editor
+function openEditor(file: string) {
   return new Promise((resolve, reject) => {
     exec(`notepad ${file}`, (err) => {
       if (err) reject(err);
-      else resolve('');
+      else resolve("");
     });
   });
 }
 
-
+// 5️⃣ Ask user input
 function askUser(question: string): Promise<string> {
   return new Promise((resolve) => {
     const rl = readline.createInterface({
@@ -52,66 +65,40 @@ function askUser(question: string): Promise<string> {
   });
 }
 
-export const main=async(info:info):Promise<string>=>{
-    try{
-  const completion = await openai.chat.completions.create({
-    model: "deepseek/deepseek-r1-0528:free",
-    messages: [
-      {
-      role: "system",
-      content: `You are an assistant that writes polished, unique, and professional email drafts.
+// 6️⃣ Main flow
+export const main = async (info: Info): Promise<string> => {
+  try {
+    // Generate initial draft
+    const res = await createCompletion(chat, `Write a ${info.tone} email for the following purpose: ${info.purpose}`);
+    let draft = res.choices[0].message?.content?.trim() || "";
 
-      Rules:
-      - Structure: Greeting → Body → Polite Closing.
-      - Adapt the tone exactly as requested:
-        • professional → clear, concise, respectful.
-        • casual → relaxed, conversational, but still polite.
-        • friendly → warm, approachable, encouraging.
-        • formal → very polite, respectful, and structured.
-        • funny → witty, lighthearted, but not unprofessional.
-      - If user input is incomplete (missing names, details, etc.), fill in placeholders like [Recipient] or [Company].
-      - Avoid clichés; use fresh, natural expressions.`
-    },
-    
-     {
+    fs.writeFileSync("./draft.txt", draft);
 
+    let keepEditing = true;
+    while (keepEditing) {
+      console.log("\n✅ Draft saved to draft.txt. Opening Notepad...");
+      await openEditor("draft.txt");
 
+      // Read updated draft
+      draft = fs.readFileSync("./draft.txt", "utf8");
+      console.log("\n📄 Current draft:\n", draft);
 
-          role: "user",
-          content: `Write a ${info.tone} email for the following purpose: ${info.purpose}`,
-     },
-    ]
-  });
-
-let draft =completion.choices[0].message.content || "" ;
-fs.writeFileSync('./draft.txt', draft);
-let keepEditing = true;
-  while (keepEditing) {
-    console.log("\n✅ Draft saved to draft.txt. Opening Notepad...");
-    await openEditor("draft.txt");
-
-    // Read user-edited version
-    draft = fs.readFileSync('./draft.txt', "utf8");
-    console.log("\n📄 Current draft:\n", draft);
-
-    // Ask user if they want AI to polish again
-    const choice = await askUser("Polish with AI? (y/done): ");
-    if (choice === "y") {
-      draft = await polishDraft(draft);
-      fs.writeFileSync("draft.txt", draft);
-      console.log("✨ Polished draft updated in draft.txt.");
-    } else if (choice === "done") {
-      keepEditing = false;
-      console.log("🎉 Final draft ready in draft.txt!");
+      const choice = await askUser("Polish with AI? (y/done): ");
+      if (choice === "y") {
+        draft = await polishDraft(draft);
+        fs.writeFileSync("draft.txt", draft);
+        console.log("✨ Polished draft updated in draft.txt.");
+      } else if (choice === "done") {
+        keepEditing = false;
+        console.log("🎉 Final draft ready in draft.txt!");
+      }
     }
+
+    return draft;
+  } catch (err) {
+    console.error("🚨 Error:", err);
+    throw new Error("Something went wrong while generating draft.");
+  } finally {
+    model.dispose(); // cleanup
   }
- return draft ?? ""; 
-}
-
-catch(err){
-    console.log(err)
-     throw new Error('hey error occured here')
-    
-}
-
-}
+};

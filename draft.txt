@@ -1,14 +1,8 @@
-Dear Atharva,
+Dear [Recipient],
 
-I hope this email finds you well. I wanted to take a moment to congratulate you on completing the JWT Concept of Backend. This is a huge accomplishment and I am so proud of you.
+I hope this email finds you well. I am a student and I came across your name in my class. I am writing to you today because I need your help in sending a random email. Please let me know if you are willing to help me.
 
-To celebrate this moment, I wanted to send you a friendly email. Here's what I have in mind:
-
-- Atharva, I am thrilled to hear that you have successfully completed the JWT Concept of Backend. Your hard work and dedication have paid off, and I am here for you every step of the way.
-- Your hard work and dedication have paid off, and I want you to know that I am here for you every step of the way.
-- I am excited to see what you will accomplish next.
-
-I hope you like this email. Let me know if there's anything else I can do to help you.
+Thank you for your time and consideration.
 
 Best regards,
-Tanmay Joshi
+[Your Name]

@@ -69,14 +69,59 @@ export async function Compose(From: string | '',
       from: From,
       to: ctx.to,
       subject: ctx.subject,
-      html: `<div style="font-family:Arial, sans-serif; line-height:1.6; padding:20px;">
-        <h2 style="color:#4CAF50;">✨ ${ctx.subject}</h2>
-        <p>👋 Hello ${ctx.to.split("@")[0]},</p>
-        <p style="margin:10px 0;">${ctx.text}</p>
-        <p>🚀 Stay awesome,<br><b>Tanmay Joshi</b></p>
-      </div>
-    `,
+      html:`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${ctx.subject}</title>
+</head>
+<body style="margin:0; padding:0; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color:#f5f7fa;">
+    <div style="max-width:600px; margin:20px auto; background-color:#ffffff; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.08); overflow:hidden;">
+        
+        <!-- Header Section -->
+        <div style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); padding:30px 20px; text-align:center;">
+            <h2 style="color:#ffffff; margin:0; font-size:24px; font-weight:600; text-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                ✨ ${ctx.subject}
+            </h2>
+        </div>
+        
+        <!-- Main Content -->
+        <div style="padding:30px 25px;">
+            <p style="font-size:18px; color:#2c3e50; margin:0 0 25px 0; font-weight:500;">
+                👋 Hello <span style="color:#4CAF50; font-weight:600;">${ctx.to.split("@")[0]}</span>,
+            </p>
+            
+            <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding:25px; border-radius:10px; border-left:5px solid #4CAF50; margin:25px 0; position:relative;">
+                <div style="position:absolute; top:15px; right:15px; font-size:24px; opacity:0.3;">🎉</div>
+                <p style="margin:0; line-height:1.7; color:#34495e; font-size:16px;">
+                    ${ctx.text}
+                </p>
+            </div>
+            
+            <!-- Signature Section -->
+            <div style="margin-top:40px; padding-top:25px; border-top:2px solid #e9ecef;">
+                <p style="margin:0; font-size:16px; color:#2c3e50; line-height:1.6;">
+                    🚀 Stay awesome,<br>
+                    <span style="color:#4CAF50; font-weight:600; font-size:18px;">Tanmay Joshi</span>
+                </p>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div style="background-color:#f8f9fa; padding:20px; text-align:center; border-top:1px solid #e9ecef;">
+            <p style="margin:0; color:#6c757d; font-size:12px;">
+                Made with ❤️ by your AI Email Assistant
+            </p>
+        </div>
+    </div>
+</body>
+</html>`,
       attachments: ctx.attachment || [],
+      headers: {
+    'Content-Type': 'text/html; charset=UTF-8',
+    'MIME-Version': '1.0'
+  }
     };
     const info = await transporter.sendMail(mailOptions);
     console.log(`✅ Email sent to ${ctx.to}. Response: ${info.response}`)

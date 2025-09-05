@@ -69,7 +69,13 @@ export async function Compose(From: string | '',
       from: From,
       to: ctx.to,
       subject: ctx.subject,
-      html: ctx.text,
+      html: `<div style="font-family:Arial, sans-serif; line-height:1.6; padding:20px;">
+        <h2 style="color:#4CAF50;">✨ ${ctx.subject}</h2>
+        <p>👋 Hello ${ctx.to.split("@")[0]},</p>
+        <p style="margin:10px 0;">${ctx.text}</p>
+        <p>🚀 Stay awesome,<br><b>Tanmay Joshi</b></p>
+      </div>
+    `,
       attachments: ctx.attachment || [],
     };
     const info = await transporter.sendMail(mailOptions);

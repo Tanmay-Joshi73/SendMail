@@ -10,25 +10,33 @@ interface Info {
   [key: string]: string | undefined;
 }
 
+// 1️⃣ Load model
 const model = await loadModel("orca-mini-3b-gguf2-q4_0.gguf", {
   verbose: true,
   device: "gpu",
   nCtx: 2048,
 });
 
+// 2️⃣ Start a chat session
 const chat = await model.createChatSession({
   temperature: 0.7,
   systemPrompt: `### System:
-You are an assistant that writes polished, unique, and professional email drafts.
-Before writing the email:
-- First list all the details you need (e.g., recipient name, company, subject, sender name, etc.).
-- Wait until the user provides them.
-Then generate the complete email.
-Email structure: Greeting → Body → Polite Closing.`,
+You are an assistant that writes polished, unique, visually appealing HTML email drafts and professional email drafts to the recipient on the behalf of me it should look like i am sending the email.
+
+Rules:
+- Always return emails in valid HTML format with inline CSS.
+- Use emojis for warmth and friendliness when suitable.
+- Apply a clean structure: <div> with font-family: Arial, sans-serif; line-height: 1.6; padding: 20px;
+- Ensure it looks good in email clients (Gmail, Outlook).
+- First, ask for any missing details needed (recipient, subject, sender, etc.).
+- Email must always follow: Greeting → Body → Polite Closing.
+- Avoid placeholders like [Friend’s Name]. If info is missing, politely ask the user for it instead.
+- When user adds new info later, rewrite the draft to include it naturally.`,
 });
 
-// Ask user in terminal
-function askUser(question: string): Promise<string> {
+// 🔹 Utility → ask user in terminal
+function askUser(question: string):
+ Promise<string> {
   return new Promise((resolve) => {
     const rl = readline.createInterface({
       input: process.stdin,
@@ -41,7 +49,7 @@ function askUser(question: string): Promise<string> {
   });
 }
 
-// Helper → query AI
+// 🔹 Utility → query AI
 async function getAIResponse(prompt: string): Promise<string> {
   const res = await createCompletion(chat, prompt);
   return res.choices[0].message?.content?.trim() || "";
@@ -51,12 +59,11 @@ async function getAIResponse(prompt: string): Promise<string> {
 async function collectDetails(info: Info): Promise<Info> {
   const missing = await getAIResponse(
     `The user wants to write a ${info.tone} email for this purpose: ${info.purpose}.
-List what details you need before drafting.`
+List what details you need before drafting. Return as simple bullet points.`
   );
 
   console.log("\n🤖 AI says it needs:\n", missing);
 
-  // Extract simple bullet-style items (fallback if model returns plain text)
   const details: Info = { ...info };
   const lines = missing.split("\n").filter((l) => l.trim().startsWith("-"));
   for (const line of lines) {
@@ -69,7 +76,7 @@ List what details you need before drafting.`
 // Step 2 → Generate email
 async function generateEmail(details: Info): Promise<string> {
   const res = await getAIResponse(
-    `Now write the complete ${details.tone} email using these details: ${JSON.stringify(details)}`
+    `Write a complete ${details.tone} email using these details: ${JSON.stringify(details)}`
   );
   return res;
 }
@@ -79,7 +86,20 @@ async function polishDraft(draft: string): Promise<string> {
   return await getAIResponse(`Polish this email without changing its intent:\n${draft}`);
 }
 
-// Open in Notepad
+// Step 4 → Update with new info
+async function updateWithNewInfo(draft: string, details: Info): Promise<string> {
+  const newInfo = await askUser("📝 Want to add new information? (e.g., 'add friend's name') or press Enter to skip: ");
+  if (newInfo) {
+    const res = await getAIResponse(
+      `Here is the current email draft:\n${draft}\n\nThe user wants to add this info: "${newInfo}". 
+       Please rewrite the full email including this info. Tone: ${details.tone}.`
+    );
+    return res;
+  }
+  return draft;
+}
+
+// 🔹 Open in Notepad
 function openEditor(file: string) {
   return new Promise((resolve, reject) => {
     exec(`notepad ${file}`, (err) => {
@@ -89,7 +109,7 @@ function openEditor(file: string) {
   });
 }
 
-// Main flow
+// 🔹 Main flow
 export const main = async (info: Info): Promise<string> => {
   try {
     // Collect details first
@@ -106,6 +126,10 @@ export const main = async (info: Info): Promise<string> => {
 
       draft = fs.readFileSync("./draft.txt", "utf8");
       console.log("\n📄 Current draft:\n", draft);
+
+      // 🔹 New feature → Add info later
+      draft = await updateWithNewInfo(draft, completeInfo);
+      fs.writeFileSync("draft.txt", draft);
 
       const choice = await askUser("Polish with AI? (y/done): ");
       if (choice === "y") {

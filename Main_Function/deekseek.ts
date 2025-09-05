@@ -7,40 +7,79 @@ interface Info {
   tone?: string;
   to?: string;
   purpose?: string;
+  [key: string]: string | undefined;
 }
 
-// 1️⃣ Load model
 const model = await loadModel("orca-mini-3b-gguf2-q4_0.gguf", {
   verbose: true,
   device: "gpu",
   nCtx: 2048,
 });
 
-// 2️⃣ Start a chat session
 const chat = await model.createChatSession({
-  temperature: 0.8,
+  temperature: 0.7,
   systemPrompt: `### System:
 You are an assistant that writes polished, unique, and professional email drafts.
-
-Rules:
-- Structure: Greeting → Body → Polite Closing.
-- Adapt the tone exactly as requested:
-  • professional → clear, concise, respectful.
-  • casual → relaxed, conversational, but still polite.
-  • friendly → warm, approachable, encouraging.
-  • formal → very polite, respectful, and structured.
-  • funny → witty, lighthearted, but not unprofessional.
-- If user input is incomplete (missing names, details, etc.), fill in placeholders like [Recipient] or [Company].
-- Avoid clichés; use fresh, natural expressions.`,
+Before writing the email:
+- First list all the details you need (e.g., recipient name, company, subject, sender name, etc.).
+- Wait until the user provides them.
+Then generate the complete email.
+Email structure: Greeting → Body → Polite Closing.`,
 });
 
-// 3️⃣ Polishing helper
-async function polishDraft(draft: string): Promise<string> {
-  const res = await createCompletion(chat, `Polish this email without changing its intent:\n${draft}`);
-  return res.choices[0].message?.content?.trim() || draft;
+// Ask user in terminal
+function askUser(question: string): Promise<string> {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    });
+  });
 }
 
-// 4️⃣ Open editor
+// Helper → query AI
+async function getAIResponse(prompt: string): Promise<string> {
+  const res = await createCompletion(chat, prompt);
+  return res.choices[0].message?.content?.trim() || "";
+}
+
+// Step 1 → Ask AI what info is needed
+async function collectDetails(info: Info): Promise<Info> {
+  const missing = await getAIResponse(
+    `The user wants to write a ${info.tone} email for this purpose: ${info.purpose}.
+List what details you need before drafting.`
+  );
+
+  console.log("\n🤖 AI says it needs:\n", missing);
+
+  // Extract simple bullet-style items (fallback if model returns plain text)
+  const details: Info = { ...info };
+  const lines = missing.split("\n").filter((l) => l.trim().startsWith("-"));
+  for (const line of lines) {
+    const key = line.replace("-", "").trim();
+    details[key] = await askUser(`Enter ${key}: `);
+  }
+  return details;
+}
+
+// Step 2 → Generate email
+async function generateEmail(details: Info): Promise<string> {
+  const res = await getAIResponse(
+    `Now write the complete ${details.tone} email using these details: ${JSON.stringify(details)}`
+  );
+  return res;
+}
+
+// Step 3 → Polish draft
+async function polishDraft(draft: string): Promise<string> {
+  return await getAIResponse(`Polish this email without changing its intent:\n${draft}`);
+}
+
+// Open in Notepad
 function openEditor(file: string) {
   return new Promise((resolve, reject) => {
     exec(`notepad ${file}`, (err) => {
@@ -50,28 +89,14 @@ function openEditor(file: string) {
   });
 }
 
-// 5️⃣ Ask user input
-function askUser(question: string): Promise<string> {
-  return new Promise((resolve) => {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-
-    rl.question(question, (answer) => {
-      rl.close();
-      resolve(answer.trim());
-    });
-  });
-}
-
-// 6️⃣ Main flow
+// Main flow
 export const main = async (info: Info): Promise<string> => {
   try {
-    // Generate initial draft
-    const res = await createCompletion(chat, `Write a ${info.tone} email for the following purpose: ${info.purpose}`);
-    let draft = res.choices[0].message?.content?.trim() || "";
+    // Collect details first
+    const completeInfo = await collectDetails(info);
 
+    // Generate draft
+    let draft = await generateEmail(completeInfo);
     fs.writeFileSync("./draft.txt", draft);
 
     let keepEditing = true;
@@ -79,7 +104,6 @@ export const main = async (info: Info): Promise<string> => {
       console.log("\n✅ Draft saved to draft.txt. Opening Notepad...");
       await openEditor("draft.txt");
 
-      // Read updated draft
       draft = fs.readFileSync("./draft.txt", "utf8");
       console.log("\n📄 Current draft:\n", draft);
 
@@ -95,10 +119,7 @@ export const main = async (info: Info): Promise<string> => {
     }
 
     return draft;
-  } catch (err) {
-    console.error("🚨 Error:", err);
-    throw new Error("Something went wrong while generating draft.");
   } finally {
-    model.dispose(); // cleanup
+    model.dispose();
   }
 };

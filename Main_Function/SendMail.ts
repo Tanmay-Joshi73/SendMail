@@ -3,8 +3,7 @@ import validator from 'validator';
 import nodemailer from 'nodemailer';
 import nfd from 'node-file-dialog'
 import { main } from "./deekseek.js";
-// import textareaPrompt from "inquirer-textarea-prompt";
-// inquirer.registerPrompt("textarea", textareaPrompt);
+
 import { GetUserEmail, pickSender } from '../utls/Credentials.js';
 import fs from 'fs'
 const ctx: {

@@ -2,16 +2,20 @@ import { exec } from "child_process";
 import fs from "fs";
 import readline from "readline";
 import { loadModel, createCompletion } from "gpt4all";
-// 1️⃣ Load model
-const model = await loadModel("orca-mini-3b-gguf2-q4_0.gguf", {
-    verbose: true,
-    device: "gpu",
-    nCtx: 2048,
-});
-// 2️⃣ Start a chat session
-const chat = await model.createChatSession({
-    temperature: 0.7,
-    systemPrompt: `### System:
+// 🔹 Global model + chat references
+let model = null;
+let chat = null;
+// 🔹 Load model and start chat session
+async function LoadModel() {
+    if (!model) {
+        model = await loadModel("orca-mini-3b-gguf2-q4_0.gguf", {
+            verbose: true,
+            device: "gpu",
+            nCtx: 2048,
+        });
+        chat = await model.createChatSession({
+            temperature: 0.7,
+            systemPrompt: `### System:
 You are an assistant that writes polished, unique, and visually appealing HTML email drafts.
 
 🎯 Writing Style Rules:
@@ -23,7 +27,7 @@ You are an assistant that writes polished, unique, and visually appealing HTML e
 📑 Formatting Rules:
 - Always return valid, complete HTML with inline CSS for compatibility.
 - Wrap content in: 
-  \`<!DOCTYPE html><html><body> ... </body></html>\`
+  <!DOCTYPE html><html><body> ... </body></html>
 - Use a clean structure:
   <div style="font-family: Arial, sans-serif; line-height: 1.6; padding: 20px;">
 - Ensure readability across Gmail, Outlook, and mobile clients.
@@ -36,7 +40,18 @@ You are an assistant that writes polished, unique, and visually appealing HTML e
 
 ✅ Goal:
 Produce emails that look like **I am personally sending them**, well-formatted in HTML, engaging, and easy to read.`,
-});
+        });
+    }
+    return chat;
+}
+// 🔹 Dispose model
+async function EndModel() {
+    if (model) {
+        model.dispose();
+        model = null;
+        chat = null;
+    }
+}
 // 🔹 Utility → ask user in terminal
 function askUser(question) {
     return new Promise((resolve) => {
@@ -52,6 +67,7 @@ function askUser(question) {
 }
 // 🔹 Utility → query AI
 async function getAIResponse(prompt) {
+    const chat = await LoadModel();
     const res = await createCompletion(chat, prompt);
     return res.choices[0].message?.content?.trim() || "";
 }
@@ -70,8 +86,7 @@ List what details you need before drafting. Return as simple bullet points.`);
 }
 // Step 2 → Generate email
 async function generateEmail(details) {
-    const res = await getAIResponse(`Write a complete ${details.tone} email using these details: ${JSON.stringify(details)}`);
-    return res;
+    return await getAIResponse(`Write a complete ${details.tone} email using these details: ${JSON.stringify(details)}`);
 }
 // Step 3 → Polish draft
 async function polishDraft(draft) {
@@ -81,9 +96,8 @@ async function polishDraft(draft) {
 async function updateWithNewInfo(draft, details) {
     const newInfo = await askUser("📝 Want to add new information? (e.g., 'add friend's name') or press Enter to skip: ");
     if (newInfo) {
-        const res = await getAIResponse(`Here is the current email draft:\n${draft}\n\nThe user wants to add this info: "${newInfo}". 
+        return await getAIResponse(`Here is the current email draft:\n${draft}\n\nThe user wants to add this info: "${newInfo}". 
        Please rewrite the full email including this info. Tone: ${details.tone}.`);
-        return res;
     }
     return draft;
 }
@@ -112,7 +126,7 @@ export const main = async (info) => {
             await openEditor("draft.txt");
             draft = fs.readFileSync("./draft.txt", "utf8");
             console.log("\n📄 Current draft:\n", draft);
-            // 🔹 New feature → Add info later
+            // 🔹 Add new info if user wants
             draft = await updateWithNewInfo(draft, completeInfo);
             fs.writeFileSync("draft.txt", draft);
             const choice = await askUser("Polish with AI? (y/done): ");
@@ -129,6 +143,6 @@ export const main = async (info) => {
         return draft;
     }
     finally {
-        model.dispose();
+        await EndModel();
     }
 };

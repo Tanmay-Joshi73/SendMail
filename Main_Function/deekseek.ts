@@ -10,17 +10,22 @@ interface Info {
   [key: string]: string | undefined;
 }
 
-// 1️⃣ Load model
-const model = await loadModel("orca-mini-3b-gguf2-q4_0.gguf", {
-  verbose: true,
-  device: "gpu",
-  nCtx: 2048,
-});
+// 🔹 Global model + chat references
+let model: any = null;
+let chat: any = null;
 
-// 2️⃣ Start a chat session
-const chat = await model.createChatSession({
-  temperature: 0.7,
-  systemPrompt: `### System:
+// 🔹 Load model and start chat session
+async function LoadModel(): Promise<any> {
+  if (!model) {
+    model = await loadModel("orca-mini-3b-gguf2-q4_0.gguf", {
+      verbose: true,
+      device: "gpu",
+      nCtx: 2048,
+    });
+
+    chat = await model.createChatSession({
+      temperature: 0.7,
+      systemPrompt: `### System:
 You are an assistant that writes polished, unique, and visually appealing HTML email drafts.
 
 🎯 Writing Style Rules:
@@ -32,7 +37,7 @@ You are an assistant that writes polished, unique, and visually appealing HTML e
 📑 Formatting Rules:
 - Always return valid, complete HTML with inline CSS for compatibility.
 - Wrap content in: 
-  \`<!DOCTYPE html><html><body> ... </body></html>\`
+  <!DOCTYPE html><html><body> ... </body></html>
 - Use a clean structure:
   <div style="font-family: Arial, sans-serif; line-height: 1.6; padding: 20px;">
 - Ensure readability across Gmail, Outlook, and mobile clients.
@@ -45,11 +50,23 @@ You are an assistant that writes polished, unique, and visually appealing HTML e
 
 ✅ Goal:
 Produce emails that look like **I am personally sending them**, well-formatted in HTML, engaging, and easy to read.`,
-});
+    });
+  }
+
+  return chat;
+}
+
+// 🔹 Dispose model
+async function EndModel(): Promise<void> {
+  if (model) {
+    model.dispose();
+    model = null;
+    chat = null;
+  }
+}
 
 // 🔹 Utility → ask user in terminal
-function askUser(question: string):
- Promise<string> {
+function askUser(question: string): Promise<string> {
   return new Promise((resolve) => {
     const rl = readline.createInterface({
       input: process.stdin,
@@ -64,6 +81,7 @@ function askUser(question: string):
 
 // 🔹 Utility → query AI
 async function getAIResponse(prompt: string): Promise<string> {
+  const chat = await LoadModel();
   const res = await createCompletion(chat, prompt);
   return res.choices[0].message?.content?.trim() || "";
 }
@@ -88,26 +106,33 @@ List what details you need before drafting. Return as simple bullet points.`
 
 // Step 2 → Generate email
 async function generateEmail(details: Info): Promise<string> {
-  const res = await getAIResponse(
-    `Write a complete ${details.tone} email using these details: ${JSON.stringify(details)}`
+  return await getAIResponse(
+    `Write a complete ${details.tone} email using these details: ${JSON.stringify(
+      details
+    )}`
   );
-  return res;
 }
 
 // Step 3 → Polish draft
 async function polishDraft(draft: string): Promise<string> {
-  return await getAIResponse(`Polish this email without changing its intent:\n${draft}`);
+  return await getAIResponse(
+    `Polish this email without changing its intent:\n${draft}`
+  );
 }
 
 // Step 4 → Update with new info
-async function updateWithNewInfo(draft: string, details: Info): Promise<string> {
-  const newInfo = await askUser("📝 Want to add new information? (e.g., 'add friend's name') or press Enter to skip: ");
+async function updateWithNewInfo(
+  draft: string,
+  details: Info
+): Promise<string> {
+  const newInfo = await askUser(
+    "📝 Want to add new information? (e.g., 'add friend's name') or press Enter to skip: "
+  );
   if (newInfo) {
-    const res = await getAIResponse(
+    return await getAIResponse(
       `Here is the current email draft:\n${draft}\n\nThe user wants to add this info: "${newInfo}". 
        Please rewrite the full email including this info. Tone: ${details.tone}.`
     );
-    return res;
   }
   return draft;
 }
@@ -140,7 +165,7 @@ export const main = async (info: Info): Promise<string> => {
       draft = fs.readFileSync("./draft.txt", "utf8");
       console.log("\n📄 Current draft:\n", draft);
 
-      // 🔹 New feature → Add info later
+      // 🔹 Add new info if user wants
       draft = await updateWithNewInfo(draft, completeInfo);
       fs.writeFileSync("draft.txt", draft);
 
@@ -157,6 +182,6 @@ export const main = async (info: Info): Promise<string> => {
 
     return draft;
   } finally {
-    model.dispose();
+    await EndModel();
   }
 };

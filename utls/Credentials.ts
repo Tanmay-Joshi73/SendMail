@@ -1,22 +1,92 @@
 import keytar from 'keytar'
 import inquirer from 'inquirer';
+import bcrypt from "bcryptjs";
+import {CreateSession,SetSession} from "./session.js"
+
 interface AccountDetails{
     Email:string,
     Password:string
 }
 const Service='sendmail-cli'
+const MasterService='SecretKey'
 const Account='Email'
-export const SetAccount=async(email:string,password:string):Promise<any>=>{
+const MasterAccount='user'
+
+export const setSecreat=async(Key:string):Promise<void>=>{
+  const existing:string | null = await keytar.getPassword(MasterService, MasterAccount);
+
+  if (!existing) {
+    const hash: string = await bcrypt.hash(Key, 10);
+    await keytar.setPassword(MasterService, MasterAccount, hash);
+    console.log("✅ Master key set successfully!");
+    return;
+  }
+  const isMatched=await bcrypt.compare(Key,existing);
+  if(!isMatched){
+    console.log("Wrong Master key")
+    return;
+  }
+ await CreateSession(Key)//This will create an random session key with Master key
+}
+
+
+
+
+
+export const SetAccount=async(email:string,password:string,masterKey:string):Promise<any>=>{
     //first checking weather email is already present or not
-    if(!email || !password){ 
+    if(!email || !password || !masterKey){ 
         console.log("please provide the email or password")
          return
         }
+
+setSecreat(masterKey) // here it check weather || create master key
+
 const result=await keytar.getPassword(Service,email);
 if(result){
     console.log("email is already present");
     return;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 await keytar.setPassword(Service,email,password)
 console.log("Email is Successfully configured")
 }

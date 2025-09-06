@@ -1,12 +1,8 @@
-Dear Tanmay,
+Key structure->
+when the user enter the configure->
 
-Happy Birthday to your friend Sameer! I hope this message finds you well.
-
-I wanted to take a moment to wish you and Sameer a very happy birthday. I hope this year brings you lots of joy, success, and love.
-
-Thank you for being such a great friend to me and Sameer. I am grateful for our friendship and the memories we have shared together.
-
-Best wishes for a wonderful birthday!
-
-Sincerely,
-[Your Name]
+First Propmt the user for Master key ->user enter the master key
+Then i will encrypt that master key and store that in keytar for checking
+(but if the master key is already present there but then i again try to add new so it will cause an error) because it must be only set once
+then when the email is written so then at that time i prompt to enter the master key again and encrypt that and the same process will be used for decryption but them mail issue is that i need to continuously enter the key for the Decryption 
+it will be frustrating but what if for the first time when the user enter the master key and then i added them also in the Keytar and also in cache memory so that it master key will be fetched from the cache for the further processing but it is only for 1 day not continues

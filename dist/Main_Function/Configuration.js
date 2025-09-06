@@ -30,7 +30,7 @@ const Configure = async () => {
             validate: (input) => input.trim().length > 0 || '❌ SMTP server is required'
         }
     ]);
-    await SetAccount(Data.email, Data.password);
+    await SetAccount(Data.email, Data.password, Data.masterKey);
 };
 export default Configure;
 // module.exports=Configure

@@ -2,7 +2,7 @@ import keytar from 'keytar'
 import inquirer from 'inquirer';
 import bcrypt from "bcryptjs";
 import {CreateSession,SetSession} from "./session.js"
-
+import crypto from 'crypto';
 interface AccountDetails{
     Email:string,
     Password:string
@@ -26,11 +26,40 @@ export const setSecreat=async(Key:string):Promise<void>=>{
     console.log("Wrong Master key")
     return;
   }
- await CreateSession(Key)//This will create an random session key with Master key
+
+
+ await CreateSession(Key)//This will create an random session key with Master key   //Second Layer;
 }
 
 
 
+const isEmailPresent = async (email: string): Promise<boolean> => {
+    const existing = await keytar.getPassword(Service, email);
+    if(existing)return true;
+    return false;
+};
+
+
+//code to encrypt the email's password
+export const Encrypt=async(pass:string,Master:string):Promise<string>=>{
+   
+    const key = crypto.createHash('sha256').update(Master).digest(); // derive 256-bit key
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+    let encrypted = cipher.update(pass, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    return iv.toString('hex') + ':' + encrypted;
+}
+//code to decrypt the password
+export const decryptPassword = (encryptedData: string, masterKey: string): string => {
+    const [ivHex, encrypted] = encryptedData.split(':');
+    const iv = Buffer.from(ivHex, 'hex');
+    const key = crypto.createHash('sha256').update(masterKey).digest();
+    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+};
 
 
 export const SetAccount=async(email:string,password:string,masterKey:string):Promise<any>=>{
@@ -41,53 +70,15 @@ export const SetAccount=async(email:string,password:string,masterKey:string):Pro
         }
 
 setSecreat(masterKey) // here it check weather || create master key
-
-const result=await keytar.getPassword(Service,email);
+const result=await isEmailPresent(email)
 if(result){
-    console.log("email is already present");
-    return;
+
+  return;
 }
+const pass=await Encrypt(password,masterKey); //password is encrypted;
+await keytar.setPassword(Service,email,pass)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-await keytar.setPassword(Service,email,password)
+await CreateSession(masterKey) //this will create the session for the further use;
 console.log("Email is Successfully configured")
 }
 
@@ -109,24 +100,24 @@ export const DeleteAccount=async():Promise<any>=>{
   ]);
 
   // Step 2: Ask user to input password
-  const { enteredPassword } = await inquirer.prompt([
-    {
-      type: "password",
-      name: "enteredPassword",
-      message: `Enter the app password for '${selectedEmail}':`,
-      mask: "*",
-    },
-  ]);
+  // const { enteredPassword } = await inquirer.prompt([
+  //   {
+  //     type: "password",
+  //     name: "enteredPassword",
+  //     message: `Enter the app password for '${selectedEmail}':`,
+  //     mask: "*",
+  //   },
+  // ]);
 
-  // Step 3: Compare with stored password
-  const savedPassword = await keytar.getPassword(Service, selectedEmail);
+  // // Step 3: Compare with stored password
+  // const savedPassword = await keytar.getPassword(Service, selectedEmail);
 
-  if (enteredPassword === savedPassword) {
+  // if (enteredPassword === savedPassword) {
     await keytar.deletePassword(Service, selectedEmail);
-    console.log(`✅ Credentials for '${selectedEmail}' deleted successfully.`);
-  } else {
-    console.log("❌ Incorrect password. Email was not deleted.");
-  }
+    // console.log(`✅ Credentials for '${selectedEmail}' deleted successfully.`);
+  // } else {
+    // console.log("❌ Incorrect password. Email was not deleted.");
+  // }
 }
 
 export const GetUserEmail=async():Promise<any>=>{

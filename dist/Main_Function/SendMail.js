@@ -3,6 +3,8 @@ import validator from 'validator';
 import nodemailer from 'nodemailer';
 import nfd from 'node-file-dialog';
 import { main } from "./deekseek.js";
+import { requireSession } from '../utls/session.js';
+import { DeleteAccount } from '../utls/Credentials.js';
 import { pickSender } from '../utls/Credentials.js';
 const ctx = {};
 const Ptx = {};
@@ -29,6 +31,11 @@ const acceptFilePath = async () => {
     }
 };
 export async function Compose(From, password, ctx) {
+    DeleteAccount();
+    //Here we first check weather Session Key is present for sending email or not 
+    requireSession();
+    console.log('hey just before sending the mail');
+    return;
     try {
         const transporter = nodemailer.createTransport({
             host: "smtp.gmail.com",

@@ -102,9 +102,11 @@ export async function Compose(From, password, ctx) {
         };
         const info = await transporter.sendMail(mailOptions);
         console.log(`✅ Email sent to ${ctx.to}. Response: ${info.response}`);
+        return true;
     }
     catch (err) {
         console.log(err);
+        return false;
     }
 }
 export const Sendmail = async () => {

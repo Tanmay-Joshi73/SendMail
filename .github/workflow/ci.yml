@@ -1,0 +1,27 @@
+name:SendMail Pipeline
+on:
+  push:
+   branches:[master]
+  pull_request:
+
+jobs:
+ Build_Run:
+  runs-on: ubuntu-latest
+
+  steps:
+   - name: Checkout Repos
+     uses: actions/checkout@v4
+
+  - name: Setup Nodejs
+    uses: actions/setup-node@v4
+     with:
+          node-version: 24
+  
+  - name: Install dependancies
+    run: npm install
+
+  - name: Build Typescript
+    run: npm run build
+
+  - name: Run Test
+    run: npm run test

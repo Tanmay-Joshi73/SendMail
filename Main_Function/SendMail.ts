@@ -48,7 +48,7 @@ const acceptFilePath = async (): Promise<void> => {
 
 export async function Compose(From: string | '',
   password: string,
-  ctx: { to: string; subject: string; text: string; attachment?: any[] }): Promise<void> {
+  ctx: { to: string; subject: string; text: string; attachment?: any[] }): Promise<Boolean> {
 
   try {
     const transporter = nodemailer.createTransport({
@@ -124,11 +124,12 @@ export async function Compose(From: string | '',
     };
     const info = await transporter.sendMail(mailOptions);
     console.log(`✅ Email sent to ${ctx.to}. Response: ${info.response}`)
-
+    return true;
 
   }
   catch (err) {
     console.log(err)
+    return false;
   }
 }
 

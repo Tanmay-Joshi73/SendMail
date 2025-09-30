@@ -1,8 +1,14 @@
 import keytar from 'keytar'
 import inquirer from 'inquirer';
+// import List
 interface AccountDetails{
     Email:string,
     Password:string
+}
+
+interface usercard{
+  account:string,
+  password:string
 }
 const Service='sendmail-cli'
 const Account='Email'
@@ -68,10 +74,19 @@ if(Credentials.length==0){
 return Credentials;
 }
 
-const listAllSenders = async () => {
+ const listAllSenders = async ():Promise<usercard[]>=>{
   const creds = await keytar.findCredentials(Service); // returns [{ account, password }]
   return creds;
 };
+
+export const showStatus=async()=>{
+  const user_information=await listAllSenders();
+  let result:Object[]=[];
+  user_information.map(c=>{
+    result.push({account:c.account})
+  })
+  console.log(result)
+}
 
 // Pick one sender email
 export const pickSender = async () => {

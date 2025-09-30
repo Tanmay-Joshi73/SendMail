@@ -62,6 +62,14 @@ const listAllSenders = async () => {
     const creds = await keytar.findCredentials(Service); // returns [{ account, password }]
     return creds;
 };
+export const showStatus = async () => {
+    const user_information = await listAllSenders();
+    let result = [];
+    user_information.map(c => {
+        result.push({ account: c.account });
+    });
+    console.log(result);
+};
 // Pick one sender email
 export const pickSender = async () => {
     const creds = await listAllSenders();
